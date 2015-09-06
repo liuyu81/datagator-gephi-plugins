@@ -9,49 +9,58 @@ import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import org.gephi.io.importer.spi.Importer;
 import org.gephi.io.importer.spi.ImporterUI;
+import org.gephi.io.importer.api.Report;
+import org.gephi.io.importer.api.Issue;
 import org.openide.util.lookup.ServiceProvider;
+
+import org.openide.util.NbBundle;
 
 /**
  *
  * @author liuyu
  */
 @ServiceProvider(service = ImporterUI.class)
-public class MatrixJsonImporterWizard implements ImporterUI {
+public class MatrixJsonImporterWizard
+    implements ImporterUI
+{
 
-    private JPanel panel;
-    private JCheckBox option;
     private MatrixJsonImporter importer;
+    private MatrixJsonImporterWizardPanel panel;
 
     @Override
-    public void setup(Importer importer) {
+    public void setup(Importer importer)
+    {
         this.importer = (MatrixJsonImporter) importer;
     }
 
     @Override
-    public JPanel getPanel() {
-        if (panel == null) {
-            panel = new MatrixJsonImporterWizardPanel();
-        }
-        return panel;
+    public JPanel getPanel()
+    {
+        panel = new MatrixJsonImporterWizardPanel();
+        return (JPanel) panel;
     }
 
     @Override
-    public void unsetup(boolean update) {
+    public void unsetup(boolean update)
+    {
         if (update) {
-            // importer.setOption(option.isSelected());
+            // edge type: directed / undirected
+            importer.setGraphType(panel.isDirectedGraph(), panel.isDynamicGraph());
         }
-        panel = null;
         importer = null;
-        option = null;
+        panel = null;
     }
 
     @Override
-    public String getDisplayName() {
-        return "Importer for DataGator Matrix JSON files";
+    public String getDisplayName()
+    {
+        return NbBundle.getMessage(MatrixJsonImporterWizard.class,
+            "MatrixJsonImporterWizard.text.title");
     }
 
     @Override
-    public boolean isUIForImporter(Importer importer) {
+    public boolean isUIForImporter(Importer importer)
+    {
         return importer instanceof MatrixJsonImporter;
     }
 }

@@ -25,7 +25,9 @@ import com.fasterxml.jackson.core.JsonParser;
  * @author LIU Yu <liuyu@opencps.net>
  * @date 2015/09/02
  */
-public class MatrixJsonImporter implements FileImporter, LongTask {
+public class MatrixJsonImporter
+    implements FileImporter, LongTask
+{
 
     private static final JsonFactory json = new JsonFactory();
 
@@ -35,52 +37,63 @@ public class MatrixJsonImporter implements FileImporter, LongTask {
     private ProgressTicket progressTicket;
     private boolean cancel = false;
 
+    public void setGraphType(boolean isDirected, boolean isDynamic)
+    {
+        ;
+    }
+    
     @Override
-    public void setReader(Reader reader) {
+    public void setReader(Reader reader)
+    {
         this.reader = reader;
     }
 
     @Override
-    public boolean execute(ContainerLoader loader) {
+    public boolean execute(ContainerLoader loader)
+    {
         this.container = loader;
         this.report = new Report();
 
-        // TODO
         try {
-            //Set container as undirected
-            container.setEdgeDefault(EdgeDefault.UNDIRECTED);
             //Import
             JsonParser parser = json.createParser(this.reader);
+            // TODO
             // importData(lineReader);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        
+
         return !cancel;
     }
 
     @Override
-    public ContainerLoader getContainer() {
+    public ContainerLoader getContainer()
+    {
         return container;
     }
 
     @Override
-    public Report getReport() {
+    public Report getReport()
+    {
         return report;
     }
 
     @Override
-    public boolean cancel() {
+    public boolean cancel()
+    {
         cancel = true;
         return true;
     }
 
     @Override
-    public void setProgressTicket(ProgressTicket progressTicket) {
+    public void setProgressTicket(ProgressTicket progressTicket)
+    {
         this.progressTicket = progressTicket;
     }
 
-    private void importData(LineNumberReader reader) throws Exception {
+    private void importData(LineNumberReader reader)
+        throws Exception
+    {
         // read type code initial line
         String line = reader.readLine();
         String typecode = line;
