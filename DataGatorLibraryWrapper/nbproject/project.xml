@@ -7,6 +7,7 @@
             <suite-component/>
             <module-dependencies/>
             <public-packages>
+                <package>com.fasterxml.jackson.annotation</package>
                 <package>com.fasterxml.jackson.core</package>
                 <package>com.fasterxml.jackson.core.base</package>
                 <package>com.fasterxml.jackson.core.filter</package>
@@ -100,6 +101,10 @@
             <class-path-extension>
                 <runtime-relative-path>ext/jackson-core-2.6.1.jar</runtime-relative-path>
                 <binary-origin>release/modules/ext/jackson-core-2.6.1.jar</binary-origin>
+            </class-path-extension>
+            <class-path-extension>
+                <runtime-relative-path>ext/jackson-annotations-2.6.0.jar</runtime-relative-path>
+                <binary-origin>release/modules/ext/jackson-annotations-2.6.0.jar</binary-origin>
             </class-path-extension>
             <class-path-extension>
                 <runtime-relative-path>ext/jackson-databind-2.6.1.jar</runtime-relative-path>

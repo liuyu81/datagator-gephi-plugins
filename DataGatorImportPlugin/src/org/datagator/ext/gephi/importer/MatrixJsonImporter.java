@@ -5,21 +5,20 @@
  */
 package org.datagator.ext.gephi.importer;
 
+import java.awt.event.ActionListener;
+import java.io.IOException;
 import java.io.LineNumberReader;
 import java.io.Reader;
-
+import java.util.ArrayList;
 import org.gephi.io.importer.api.ContainerLoader;
-import org.gephi.io.importer.api.EdgeDefault;
 import org.gephi.io.importer.api.EdgeDraft;
-import org.gephi.io.importer.api.ImportUtils;
 import org.gephi.io.importer.api.NodeDraft;
 import org.gephi.io.importer.api.Report;
 import org.gephi.io.importer.spi.FileImporter;
+import org.gephi.io.importer.spi.ImporterUI;
 import org.gephi.utils.longtask.spi.LongTask;
 import org.gephi.utils.progress.ProgressTicket;
-
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
+import org.openide.util.Exceptions;
 
 /**
  * @author LIU Yu <liuyu@opencps.net>
@@ -28,8 +27,6 @@ import com.fasterxml.jackson.core.JsonParser;
 public class MatrixJsonImporter
     implements FileImporter, LongTask
 {
-
-    private static final JsonFactory json = new JsonFactory();
 
     private Reader reader;
     private ContainerLoader container;
@@ -41,7 +38,7 @@ public class MatrixJsonImporter
     {
         ;
     }
-    
+
     @Override
     public void setReader(Reader reader)
     {
@@ -55,8 +52,6 @@ public class MatrixJsonImporter
         this.report = new Report();
 
         try {
-            //Import
-            JsonParser parser = json.createParser(this.reader);
             // TODO
             // importData(lineReader);
         } catch (Exception e) {

@@ -24,6 +24,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.CellEditorListener;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.TableModelEvent;
+import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableModel;
 
@@ -34,7 +35,7 @@ import org.openide.awt.Mnemonics;
  *
  * @author liuyu
  */
-public class MatrixJsonImporterWizardPanel
+public class MatrixJsonImporterUIPanel
     extends javax.swing.JPanel
 {
 
@@ -44,17 +45,17 @@ public class MatrixJsonImporterWizardPanel
 
         // column role options
         public static final String SOURCE_NODE = NbBundle.getMessage(
-            MatrixJsonImporterWizard.class,
+            MatrixJsonImporterUI.class,
             "MatrixJsonImporterWizard.role.node_src");
         public static final String TARGET_NODE = NbBundle.getMessage(
-            MatrixJsonImporterWizard.class,
+            MatrixJsonImporterUI.class,
             "MatrixJsonImporterWizard.role.node_tgt");
         public static final String NODE = NbBundle.getMessage(
-            MatrixJsonImporterWizard.class, "MatrixJsonImporterWizard.role.node");
+            MatrixJsonImporterUI.class, "MatrixJsonImporterWizard.role.node");
         public static final String EDGE = NbBundle.getMessage(
-            MatrixJsonImporterWizard.class, "MatrixJsonImporterWizard.role.edge");
+            MatrixJsonImporterUI.class, "MatrixJsonImporterWizard.role.edge");
         public static final String TIME = NbBundle.getMessage(
-            MatrixJsonImporterWizard.class, "MatrixJsonImporterWizard.role.time");
+            MatrixJsonImporterUI.class, "MatrixJsonImporterWizard.role.time");
 
         public RoleEditorWidget(boolean isDirectedGraph, boolean isDynamicGraph)
         {
@@ -71,6 +72,7 @@ public class MatrixJsonImporterWizardPanel
             if (isDynamicGraph) {
                 model.addElement(TIME);
             }
+            model.addElement(null);
         }
     };
 
@@ -103,7 +105,8 @@ public class MatrixJsonImporterWizardPanel
                 widget.removeActionListener(item);
             }
 
-            // resolve conflicting roles
+            // the role editor is shared by the entire table column, we need
+            // this listener to keep track of the table cell being edited.
             widget.addActionListener(new ActionListener()
             {
                 @Override
@@ -124,7 +127,7 @@ public class MatrixJsonImporterWizardPanel
         private void onRoleChange(JTable table, int row, String newRole)
         {
             assert (newRole != null);
-            // for undirecte graph, NODE role can appear twice (recur once),
+            // for undirecte graph, the NODE role can appear twice (recur once),
             // other roles are exclusive, they cannot recur;
             final int maxRecurrence;
             if (!isDirected && newRole.equals(RoleEditorWidget.NODE)) {
@@ -132,7 +135,7 @@ public class MatrixJsonImporterWizardPanel
             } else {
                 maxRecurrence = 0;
             }
-            // unset reappearing roles 
+            // clear recurrences of roles beyond the upper limit
             TableModel model = table.getModel();
             assert (model.getColumnCount() == 2);
             int observed = 0;
@@ -154,7 +157,7 @@ public class MatrixJsonImporterWizardPanel
     /**
      * Creates new form MatrixJsonImporterWizardPanel
      */
-    public MatrixJsonImporterWizardPanel()
+    public MatrixJsonImporterUIPanel()
     {
         initComponents();
         updateCellEditor();
@@ -196,7 +199,7 @@ public class MatrixJsonImporterWizardPanel
             }
         });
 
-        org.openide.awt.Mnemonics.setLocalizedText(jLabel1, org.openide.util.NbBundle.getMessage(MatrixJsonImporterWizardPanel.class, "MatrixJsonImporterWizard.text.graph_type")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(jLabel1, org.openide.util.NbBundle.getMessage(MatrixJsonImporterUIPanel.class, "MatrixJsonImporterWizard.text.graph_type")); // NOI18N
 
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][]
@@ -264,6 +267,7 @@ public class MatrixJsonImporterWizardPanel
 
     private void updateCellEditor()
     {
+        // force any on-going cell editing to stop
         jTable1.removeEditor();
         // clear previously-specified roles
         TableModel model = jTable1.getModel();
@@ -274,6 +278,45 @@ public class MatrixJsonImporterWizardPanel
         // update cell editor
         TableColumn column = jTable1.getColumnModel().getColumn(1);
         column.setCellEditor(new RoleEditor(isDirectedGraph(), isDynamicGraph()));
+    }
+
+    public void updateTableModel(Object[][] columns)
+    {
+        assert (columns.length > 0);
+        Object[][] data = new Object[columns[0].length][2];
+        for (int r = 0; r < columns[0].length; r++) {
+            data[r][0] = columns[0][r];
+            data[r][1] = null;
+        }
+        jTable1.setModel(new DefaultTableModel(
+            data,
+            new String[]{
+                NbBundle.getMessage(MatrixJsonImporterUI.class,
+                    "MatrixJsonImporterWizard.table.attr"),
+                NbBundle.getMessage(MatrixJsonImporterUI.class,
+                    "MatrixJsonImporterWizard.table.role")
+            }
+        )
+        {
+            Class[] types = new Class[]{
+                java.lang.String.class, java.lang.Object.class
+            };
+
+            boolean[] canEdit = new boolean[]{
+                false, true
+            };
+
+            public Class getColumnClass(int columnIndex)
+            {
+                return types[columnIndex];
+            }
+
+            public boolean isCellEditable(int rowIndex, int columnIndex)
+            {
+                return canEdit[columnIndex];
+            }
+        });
+        updateCellEditor();
     }
 
     private void onGraphTypeChange(java.awt.event.ActionEvent evt)//GEN-FIRST:event_onGraphTypeChange
