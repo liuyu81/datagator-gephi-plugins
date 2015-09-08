@@ -24,24 +24,23 @@ import org.openide.util.NbBundle;
 class MatrixJsonImporterUIPanel
     extends javax.swing.JPanel
 {
+    // column role options
+    public static final String SOURCE_NODE = NbBundle.getMessage(
+        MatrixJsonImporterUI.class,
+        "MatrixJsonImporterUI.role.node_src");
+    public static final String TARGET_NODE = NbBundle.getMessage(
+        MatrixJsonImporterUI.class,
+        "MatrixJsonImporterUI.role.node_tgt");
+    public static final String NODE = NbBundle.getMessage(
+        MatrixJsonImporterUI.class, "MatrixJsonImporterUI.role.node");
+    public static final String EDGE = NbBundle.getMessage(
+        MatrixJsonImporterUI.class, "MatrixJsonImporterUI.role.edge");
+    public static final String TIME = NbBundle.getMessage(
+        MatrixJsonImporterUI.class, "MatrixJsonImporterUI.role.time");
 
     private static class RoleEditorWidget
         extends JComboBox
     {
-
-        // column role options
-        public static final String SOURCE_NODE = NbBundle.getMessage(
-            MatrixJsonImporterUI.class,
-            "MatrixJsonImporterWizard.role.node_src");
-        public static final String TARGET_NODE = NbBundle.getMessage(
-            MatrixJsonImporterUI.class,
-            "MatrixJsonImporterWizard.role.node_tgt");
-        public static final String NODE = NbBundle.getMessage(
-            MatrixJsonImporterUI.class, "MatrixJsonImporterWizard.role.node");
-        public static final String EDGE = NbBundle.getMessage(
-            MatrixJsonImporterUI.class, "MatrixJsonImporterWizard.role.edge");
-        public static final String TIME = NbBundle.getMessage(
-            MatrixJsonImporterUI.class, "MatrixJsonImporterWizard.role.time");
 
         public RoleEditorWidget(boolean isDirectedGraph, boolean isDynamicGraph)
         {
@@ -116,7 +115,7 @@ class MatrixJsonImporterUIPanel
             // for undirecte graph, the NODE role can appear twice (recur once),
             // other roles are exclusive, they cannot recur;
             final int maxRecurrence;
-            if (!isDirected && newRole.equals(RoleEditorWidget.NODE)) {
+            if (!isDirected && newRole.equals(NODE)) {
                 maxRecurrence = 1;
             } else {
                 maxRecurrence = 0;
@@ -185,7 +184,7 @@ class MatrixJsonImporterUIPanel
             }
         });
 
-        org.openide.awt.Mnemonics.setLocalizedText(jLabel1, org.openide.util.NbBundle.getMessage(MatrixJsonImporterUIPanel.class, "MatrixJsonImporterWizard.text.graph_type")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(jLabel1, org.openide.util.NbBundle.getMessage(MatrixJsonImporterUIPanel.class, "MatrixJsonImporterUI.text.graph_type")); // NOI18N
 
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][]
@@ -265,6 +264,11 @@ class MatrixJsonImporterUIPanel
         column.setCellEditor(new RoleEditor(isDirectedGraph(), isDynamicGraph()));
     }
 
+    public TableModel getTableModel()
+    {
+        return jTable1.getModel();
+    }
+
     public void updateTableModel(int matrixRows, int matrixColumns,
         Object[][] matrixHeaders)
     {
@@ -278,7 +282,7 @@ class MatrixJsonImporterUIPanel
         Object[][] data = new Object[matrixColumns][2];
         if (matrixHeaders.length > 0) {
             // non-empty matrix header
-            assert(matrixHeaders[0].length == matrixColumns);
+            assert (matrixHeaders[0].length == matrixColumns);
             for (int c = 0; c < matrixColumns; c++) {
                 data[c][0] = matrixHeaders[0][c];
                 data[c][1] = null;
@@ -295,9 +299,9 @@ class MatrixJsonImporterUIPanel
             data,
             new String[]{
                 NbBundle.getMessage(MatrixJsonImporterUI.class,
-                    "MatrixJsonImporterWizard.table.attr"),
+                    "MatrixJsonImporterUI.table.attr"),
                 NbBundle.getMessage(MatrixJsonImporterUI.class,
-                    "MatrixJsonImporterWizard.table.role")
+                    "MatrixJsonImporterUI.table.role")
             }
         )
         {

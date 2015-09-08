@@ -9,7 +9,9 @@ import java.awt.Cursor;
 import java.io.FileReader;
 import java.io.IOException;
 import javax.swing.JPanel;
+import javax.swing.table.TableModel;
 import org.datagator.api.client.Matrix;
+import org.datagator.api.client.SimpleMatrix;
 import org.gephi.desktop.mrufiles.api.MostRecentFiles;
 import org.gephi.io.importer.spi.Importer;
 import org.gephi.io.importer.spi.ImporterUI;
@@ -55,9 +57,9 @@ public class MatrixJsonImporterUI
             {
                 Cursor oldCursor = panel.getCursor();
                 panel.setCursor(new Cursor(Cursor.WAIT_CURSOR));
-                Matrix matrix = importer.getMatrix();
-                panel.updateTableModel(matrix.rowsCount, matrix.columnsCount,
-                    matrix.getColumnHeaders());
+                Matrix preview = importer.getMatrixHeaders();
+                panel.updateTableModel(preview.getRowsCount(),
+                    preview.getColumnsCount(), preview.toArray());
                 panel.setCursor(oldCursor);
             }
         };
@@ -87,6 +89,29 @@ public class MatrixJsonImporterUI
             // edge type: directed / undirected
             importer.setGraphType(panel.isDirectedGraph(),
                 panel.isDynamicGraph());
+            // 
+            TableModel model = panel.getTableModel();
+            for (int r = 0, c = 1; r < model.getRowCount(); r++) {
+                Object roleName = model.getValueAt(r, c);
+                final MatrixJsonImporter.RoleType roleValue;
+                if (roleName == null) {
+                    continue;
+                } if (roleName.equals(MatrixJsonImporterUIPanel.SOURCE_NODE)) {
+                    roleValue = MatrixJsonImporter.RoleType.SOURCE_NODE;
+                } else if (roleName.equals(MatrixJsonImporterUIPanel.TARGET_NODE)) {
+                    roleValue = MatrixJsonImporter.RoleType.SOURCE_NODE;
+                } else if (roleName.equals(MatrixJsonImporterUIPanel.NODE)) {
+                    roleValue = MatrixJsonImporter.RoleType.NODE;
+                } else if (roleName.equals((MatrixJsonImporterUIPanel.EDGE))) {
+                    roleValue = MatrixJsonImporter.RoleType.EDGE_LABEL;
+                } else if (roleName.equals((MatrixJsonImporterUIPanel.TIME))) {
+                    roleValue = MatrixJsonImporter.RoleType.TIME;
+                } else {
+                    throw new RuntimeException(NbBundle.getMessage(
+                        MatrixJsonImporter.class,
+                        "MatrixJsonImporter.msg.bad_role"));
+                }
+            }
         }
         executor.cancel();
         executor = null;
@@ -98,7 +123,7 @@ public class MatrixJsonImporterUI
     public String getDisplayName()
     {
         return NbBundle.getMessage(MatrixJsonImporterUI.class,
-            "MatrixJsonImporterWizard.text.title");
+            "MatrixJsonImporterUI.text.title");
     }
 
     @Override

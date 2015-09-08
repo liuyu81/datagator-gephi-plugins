@@ -18,11 +18,11 @@ import java.util.ArrayList;
  * @author liuyu
  */
 class MatrixDeserializer
-    extends JsonDeserializer<Matrix>
+    extends JsonDeserializer<SimpleMatrix>
 {
 
     @Override
-    public Matrix deserialize(JsonParser jp, DeserializationContext cntx)
+    public SimpleMatrix deserialize(JsonParser jp, DeserializationContext cntx)
         throws IOException, JsonProcessingException
     {
         int rowIndex;
@@ -70,7 +70,7 @@ class MatrixDeserializer
             } else if (name.equals("rows")) {
                 if (bodyRow < 0 || bodyColumn < 0) {
                     throw new RuntimeException(
-                        "Unexpected property order 'columnHeaders' and 'rowHeaders' should preceed 'rows'.");
+                        "Unexpected property order 'columnHeaders' and 'rowHeaders' should precede 'rows'.");
                 }
                 rowIndex = 0;
                 if (!token.equals(JsonToken.START_ARRAY)) {
@@ -125,6 +125,11 @@ class MatrixDeserializer
             throw new RuntimeException("Invalid Matrix shape");
         }
 
+        // special case: size of empty matrix is 1 x 0
+        if ((columnsCount == 0) && (rowsCount != 1)) {
+            throw new RuntimeException("Invalid Matrix shape");
+        }
+
         Object[][] rows = new Object[bodyRow][columnsCount];
         for (int r = 0; r < bodyRow; r++) {
             for (int c = 0; c < columnsCount; c++) {
@@ -132,7 +137,7 @@ class MatrixDeserializer
             }
         }
 
-        return new Matrix(bodyRow, bodyColumn, rows, rowsCount, columnsCount);
+        return new SimpleMatrix(bodyRow, bodyColumn, rows, rowsCount, columnsCount);
     }
 
 };

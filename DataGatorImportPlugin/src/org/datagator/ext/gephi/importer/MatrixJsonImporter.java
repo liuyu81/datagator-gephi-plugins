@@ -11,6 +11,7 @@ import java.io.LineNumberReader;
 import java.io.Reader;
 import java.util.ArrayList;
 import org.datagator.api.client.Matrix;
+import org.datagator.api.client.SimpleMatrix;
 import org.gephi.io.importer.api.ContainerLoader;
 import org.gephi.io.importer.api.EdgeDraft;
 import org.gephi.io.importer.api.NodeDraft;
@@ -20,6 +21,7 @@ import org.gephi.io.importer.spi.ImporterUI;
 import org.gephi.utils.longtask.spi.LongTask;
 import org.gephi.utils.progress.ProgressTicket;
 import org.openide.util.Exceptions;
+import org.openide.util.NbBundle;
 
 /**
  * @author LIU Yu <liuyu@opencps.net>
@@ -35,23 +37,42 @@ public class MatrixJsonImporter
     private ProgressTicket progressTicket;
     private boolean cancel = false;
 
-    private Matrix matrix = null;
+    private Matrix matrixHeaders = null;
 
-    public Matrix getMatrix()
+    public enum RoleType
     {
-        if (this.matrix == null) {
-            assert (this.reader != null);
-            try {
 
-                this.matrix = Matrix.create(this.reader);
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
+        SOURCE_NODE,
+        TARGET_NODE,
+        NODE,
+        EDGE_WEIGHT,
+        EDGE_LABEL,
+        TIME,
+    };
+
+    public Matrix getMatrixHeaders()
+    {
+        if (this.matrixHeaders == null) {
+            try {
+                this.matrixHeaders
+                    = SimpleMatrix.create(this.reader).getColumnHeaders();
+            } catch (IOException ioe) {
+                throw new RuntimeException(ioe);
+            } catch (RuntimeException re) {
+                throw new RuntimeException(NbBundle.getMessage(
+                    MatrixJsonImporter.class,
+                    "MatrixJsonImporter.msg.bad_matrix"));
             }
         }
-        return this.matrix;
+        return this.matrixHeaders;
     }
 
     public void setGraphType(boolean isDirected, boolean isDynamic)
+    {
+        ;
+    }
+
+    public void setColumnRole(int columnIndex, RoleType columnRole)
     {
         ;
     }
