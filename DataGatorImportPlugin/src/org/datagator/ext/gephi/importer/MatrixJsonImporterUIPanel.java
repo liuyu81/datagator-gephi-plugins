@@ -8,34 +8,20 @@ package org.datagator.ext.gephi.importer;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
-import java.util.ArrayList;
-import java.util.List;
-
 import javax.swing.DefaultCellEditor;
 import javax.swing.DefaultComboBoxModel;
-import javax.swing.table.TableColumn;
 import javax.swing.JComboBox;
 import javax.swing.JTable;
-import javax.swing.SwingUtilities;
-import javax.swing.event.CellEditorListener;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.TableModelEvent;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableCellEditor;
+import javax.swing.table.TableColumn;
 import javax.swing.table.TableModel;
-
 import org.openide.util.NbBundle;
-import org.openide.awt.Mnemonics;
 
 /**
  *
  * @author liuyu
  */
-public class MatrixJsonImporterUIPanel
+class MatrixJsonImporterUIPanel
     extends javax.swing.JPanel
 {
 
@@ -204,8 +190,7 @@ public class MatrixJsonImporterUIPanel
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][]
             {
-                {null, null},
-                {null, null}
+
             },
             new String []
             {
@@ -267,7 +252,7 @@ public class MatrixJsonImporterUIPanel
 
     private void updateCellEditor()
     {
-        // force any on-going cell editing to stop
+        // terminate any on-going cell editing
         jTable1.removeEditor();
         // clear previously-specified roles
         TableModel model = jTable1.getModel();
@@ -280,14 +265,32 @@ public class MatrixJsonImporterUIPanel
         column.setCellEditor(new RoleEditor(isDirectedGraph(), isDynamicGraph()));
     }
 
-    public void updateTableModel(Object[][] columns)
+    public void updateTableModel(int matrixRows, int matrixColumns,
+        Object[][] matrixHeaders)
     {
-        assert (columns.length > 0);
-        Object[][] data = new Object[columns[0].length][2];
-        for (int r = 0; r < columns[0].length; r++) {
-            data[r][0] = columns[0][r];
-            data[r][1] = null;
+        // matrix headers may span more than one rows, and may be empty at all,
+        // so we rely on `matrixColumns` to determine the actual # of columns.
+
+        if ((matrixRows <= 0) || (matrixColumns <= 0)) {
+            return;
         }
+
+        Object[][] data = new Object[matrixColumns][2];
+        if (matrixHeaders.length > 0) {
+            // non-empty matrix header
+            assert(matrixHeaders[0].length == matrixColumns);
+            for (int c = 0; c < matrixColumns; c++) {
+                data[c][0] = matrixHeaders[0][c];
+                data[c][1] = null;
+            }
+        } else {
+            // empty matrix header
+            for (int c = 0; c < matrixColumns; c++) {
+                data[c][0] = Integer.toString(c + 1);
+                data[c][1] = null;
+            }
+        }
+
         jTable1.setModel(new DefaultTableModel(
             data,
             new String[]{

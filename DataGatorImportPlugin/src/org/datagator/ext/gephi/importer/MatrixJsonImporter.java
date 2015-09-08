@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.LineNumberReader;
 import java.io.Reader;
 import java.util.ArrayList;
+import org.datagator.api.client.Matrix;
 import org.gephi.io.importer.api.ContainerLoader;
 import org.gephi.io.importer.api.EdgeDraft;
 import org.gephi.io.importer.api.NodeDraft;
@@ -33,6 +34,22 @@ public class MatrixJsonImporter
     private Report report;
     private ProgressTicket progressTicket;
     private boolean cancel = false;
+
+    private Matrix matrix = null;
+
+    public Matrix getMatrix()
+    {
+        if (this.matrix == null) {
+            assert (this.reader != null);
+            try {
+
+                this.matrix = Matrix.create(this.reader);
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+        return this.matrix;
+    }
 
     public void setGraphType(boolean isDirected, boolean isDynamic)
     {
