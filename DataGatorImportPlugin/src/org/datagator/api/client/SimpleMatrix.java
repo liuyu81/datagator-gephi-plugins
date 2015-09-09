@@ -5,55 +5,41 @@
  */
 package org.datagator.api.client;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.io.IOException;
 import java.io.Reader;
-import static java.lang.Math.min;
-import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
+ * immutable Matrix object implementation
  *
- * @author liuyu
+ * @author LIU Yu <liuyu@opencps.net>
+ * @date 2015/09/07
  */
 @JsonDeserialize(using = MatrixDeserializer.class)
 public class SimpleMatrix
+    extends Entity
     implements Matrix
 {
-
-    private static final JsonFactory json;
-
-    static {
-        json = new JsonFactory();
-        json.setCodec(new ObjectMapper());
-    }
 
     public static SimpleMatrix create(Reader reader)
         throws IOException
     {
-        JsonParser parser = json.createParser(reader);
-        return parser.readValueAs(SimpleMatrix.class);
+        return (SimpleMatrix) Entity.create(reader);
     }
 
-    private final String kind;
     private final int rowsCount;
     private final int columnsCount;
-    private final Object[][] rows;
+    private final MatrixRowBuffer rows;
     private final int bodyRow;
     private final int bodyColumn;
 
-    protected SimpleMatrix(int columnHeaders, int rowHeaders, Object[][] rows,
-        int rowsCount, int columnsCount)
+    protected SimpleMatrix(int columnHeaders, int rowHeaders,
+        MatrixRowBuffer rows, int rowsCount, int columnsCount)
     {
-        this.kind = "Matrix";
+        super("datagator#Matrix");
         this.bodyRow = columnHeaders;
         this.bodyColumn = rowHeaders;
         this.rows = rows;
@@ -74,21 +60,19 @@ public class SimpleMatrix
     }
 
     @Override
-    public Matrix getColumnHeaders()
+    public Matrix columnHeaders()
     {
-        Object[][] slice = new Object[bodyRow][columnsCount];
+        MatrixRowBuffer slice = new SimpleRowBuffer();
+        Iterator<Object[]> it = rows();
         for (int r = 0; r < bodyRow; r++) {
-            for (int c = 0; c < columnsCount; c++) {
-                slice[r][c] = rows[r][c];
-            }
+            slice.put(it.next());
         }
         return new SimpleMatrix(0, bodyColumn, slice, bodyRow, columnsCount);
     }
 
     @Override
-    public Object[][] toArray()
+    public Iterator<Object[]> rows()
     {
-        return rows;
+        return rows.iterator();
     }
-
 }

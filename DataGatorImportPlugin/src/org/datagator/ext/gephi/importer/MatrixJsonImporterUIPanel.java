@@ -8,6 +8,9 @@ package org.datagator.ext.gephi.importer;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.Iterator;
 import javax.swing.DefaultCellEditor;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
@@ -24,7 +27,9 @@ import org.openide.util.NbBundle;
 class MatrixJsonImporterUIPanel
     extends javax.swing.JPanel
 {
+
     // column role options
+
     public static final String SOURCE_NODE = NbBundle.getMessage(
         MatrixJsonImporterUI.class,
         "MatrixJsonImporterUI.role.node_src");
@@ -269,27 +274,27 @@ class MatrixJsonImporterUIPanel
         return jTable1.getModel();
     }
 
-    public void updateTableModel(int matrixRows, int matrixColumns,
-        Object[][] matrixHeaders)
+    public void updateTableModel(int rowsCount, int columnsCount,
+        Iterator<Object[]> rows)
     {
-        // matrix headers may span more than one rows, and may be empty at all,
-        // so we rely on `matrixColumns` to determine the actual # of columns.
-
-        if ((matrixRows <= 0) || (matrixColumns <= 0)) {
+        if ((rowsCount <= 0) || (columnsCount <= 0)) {
             return;
         }
 
-        Object[][] data = new Object[matrixColumns][2];
-        if (matrixHeaders.length > 0) {
+        Object[][] data = new Object[columnsCount][2];
+        if (rows.hasNext()) {
             // non-empty matrix header
-            assert (matrixHeaders[0].length == matrixColumns);
-            for (int c = 0; c < matrixColumns; c++) {
-                data[c][0] = matrixHeaders[0][c];
+            Object[] matrixHeader = rows.next();
+            if (matrixHeader.length != columnsCount) {
+                return;
+            }
+            for (int c = 0; c < columnsCount; c++) {
+                data[c][0] = matrixHeader[c];
                 data[c][1] = null;
             }
         } else {
             // empty matrix header
-            for (int c = 0; c < matrixColumns; c++) {
+            for (int c = 0; c < columnsCount; c++) {
                 data[c][0] = Integer.toString(c + 1);
                 data[c][1] = null;
             }

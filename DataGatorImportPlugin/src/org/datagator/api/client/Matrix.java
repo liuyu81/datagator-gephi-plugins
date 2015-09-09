@@ -1,18 +1,17 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package org.datagator.api.client;
 
+import java.util.Iterator;
+
 /**
+ * Four-square model of Matrix object
  *
- * @author liuyu
+ * @author LIU Yu <liuyu@opencps.net>
+ * @date 2015/09/03
  */
 public interface Matrix
 {
     public int getRowsCount();
     public int getColumnsCount();
-    public Matrix getColumnHeaders();
-    public Object[][] toArray();
+    public Matrix columnHeaders();
+    public Iterator<Object[]> rows();
 }

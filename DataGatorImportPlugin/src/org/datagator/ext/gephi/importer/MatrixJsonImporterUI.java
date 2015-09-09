@@ -8,11 +8,14 @@ package org.datagator.ext.gephi.importer;
 import java.awt.Cursor;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
 import javax.swing.JPanel;
 import javax.swing.table.TableModel;
 import org.datagator.api.client.Matrix;
-import org.datagator.api.client.SimpleMatrix;
 import org.gephi.desktop.mrufiles.api.MostRecentFiles;
+import org.gephi.io.importer.api.Issue;
 import org.gephi.io.importer.spi.Importer;
 import org.gephi.io.importer.spi.ImporterUI;
 import org.gephi.utils.longtask.api.LongTaskExecutor;
@@ -28,6 +31,22 @@ import org.openide.util.lookup.ServiceProvider;
 public class MatrixJsonImporterUI
     implements ImporterUI
 {
+
+    private static Map<String, MatrixJsonImporter.ColumnRoleType> roleDict;
+
+    static {
+        roleDict = new HashMap<String, MatrixJsonImporter.ColumnRoleType>();
+        roleDict.put(MatrixJsonImporterUIPanel.SOURCE_NODE,
+            MatrixJsonImporter.ColumnRoleType.SOURCE_NODE);
+        roleDict.put(MatrixJsonImporterUIPanel.TARGET_NODE,
+            MatrixJsonImporter.ColumnRoleType.TARGET_NODE);
+        roleDict.put(MatrixJsonImporterUIPanel.NODE,
+            MatrixJsonImporter.ColumnRoleType.UNDIRECTED_NODE);
+        roleDict.put(MatrixJsonImporterUIPanel.EDGE,
+            MatrixJsonImporter.ColumnRoleType.EDGE_LABEL);
+        roleDict.put(MatrixJsonImporterUIPanel.TIME,
+            MatrixJsonImporter.ColumnRoleType.TIME);
+    }
 
     private MatrixJsonImporter importer;
     private MatrixJsonImporterUIPanel panel;
@@ -59,7 +78,7 @@ public class MatrixJsonImporterUI
                 panel.setCursor(new Cursor(Cursor.WAIT_CURSOR));
                 Matrix preview = importer.getMatrixHeaders();
                 panel.updateTableModel(preview.getRowsCount(),
-                    preview.getColumnsCount(), preview.toArray());
+                    preview.getColumnsCount(), preview.rows());
                 panel.setCursor(oldCursor);
             }
         };
@@ -89,28 +108,23 @@ public class MatrixJsonImporterUI
             // edge type: directed / undirected
             importer.setGraphType(panel.isDirectedGraph(),
                 panel.isDynamicGraph());
-            // 
+            //
             TableModel model = panel.getTableModel();
             for (int r = 0, c = 1; r < model.getRowCount(); r++) {
                 Object roleName = model.getValueAt(r, c);
-                final MatrixJsonImporter.RoleType roleValue;
                 if (roleName == null) {
                     continue;
-                } if (roleName.equals(MatrixJsonImporterUIPanel.SOURCE_NODE)) {
-                    roleValue = MatrixJsonImporter.RoleType.SOURCE_NODE;
-                } else if (roleName.equals(MatrixJsonImporterUIPanel.TARGET_NODE)) {
-                    roleValue = MatrixJsonImporter.RoleType.SOURCE_NODE;
-                } else if (roleName.equals(MatrixJsonImporterUIPanel.NODE)) {
-                    roleValue = MatrixJsonImporter.RoleType.NODE;
-                } else if (roleName.equals((MatrixJsonImporterUIPanel.EDGE))) {
-                    roleValue = MatrixJsonImporter.RoleType.EDGE_LABEL;
-                } else if (roleName.equals((MatrixJsonImporterUIPanel.TIME))) {
-                    roleValue = MatrixJsonImporter.RoleType.TIME;
-                } else {
-                    throw new RuntimeException(NbBundle.getMessage(
-                        MatrixJsonImporter.class,
-                        "MatrixJsonImporter.msg.bad_role"));
                 }
+                MatrixJsonImporter.ColumnRoleType roleType
+                    = this.roleDict.get(roleName);
+                if (roleType == null) {
+                    importer.getReport().logIssue(new Issue(String.format(
+                        NbBundle.getMessage(
+                            MatrixJsonImporter.class,
+                            "MatrixJsonImporter.msg_tmpl.bad_role"), roleName),
+                        Issue.Level.SEVERE));
+                }
+                importer.setColumnRole(r, roleType);
             }
         }
         executor.cancel();

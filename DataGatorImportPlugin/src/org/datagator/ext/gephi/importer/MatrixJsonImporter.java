@@ -5,11 +5,9 @@
  */
 package org.datagator.ext.gephi.importer;
 
-import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.io.LineNumberReader;
 import java.io.Reader;
-import java.util.ArrayList;
 import org.datagator.api.client.Matrix;
 import org.datagator.api.client.SimpleMatrix;
 import org.gephi.io.importer.api.ContainerLoader;
@@ -17,10 +15,8 @@ import org.gephi.io.importer.api.EdgeDraft;
 import org.gephi.io.importer.api.NodeDraft;
 import org.gephi.io.importer.api.Report;
 import org.gephi.io.importer.spi.FileImporter;
-import org.gephi.io.importer.spi.ImporterUI;
 import org.gephi.utils.longtask.spi.LongTask;
 import org.gephi.utils.progress.ProgressTicket;
-import org.openide.util.Exceptions;
 import org.openide.util.NbBundle;
 
 /**
@@ -39,12 +35,11 @@ public class MatrixJsonImporter
 
     private Matrix matrixHeaders = null;
 
-    public enum RoleType
+    public static enum ColumnRoleType
     {
-
         SOURCE_NODE,
         TARGET_NODE,
-        NODE,
+        UNDIRECTED_NODE,
         EDGE_WEIGHT,
         EDGE_LABEL,
         TIME,
@@ -55,13 +50,14 @@ public class MatrixJsonImporter
         if (this.matrixHeaders == null) {
             try {
                 this.matrixHeaders
-                    = SimpleMatrix.create(this.reader).getColumnHeaders();
+                    = SimpleMatrix.create(this.reader).columnHeaders();
             } catch (IOException ioe) {
                 throw new RuntimeException(ioe);
             } catch (RuntimeException re) {
-                throw new RuntimeException(NbBundle.getMessage(
-                    MatrixJsonImporter.class,
-                    "MatrixJsonImporter.msg.bad_matrix"));
+                throw re;
+                // throw new RuntimeException(NbBundle.getMessage(
+                //    MatrixJsonImporter.class,
+                //    "MatrixJsonImporter.msg.bad_matrix"));
             }
         }
         return this.matrixHeaders;
@@ -69,12 +65,16 @@ public class MatrixJsonImporter
 
     public void setGraphType(boolean isDirected, boolean isDynamic)
     {
-        ;
+        System.out.println(String.format("directed: %s",
+            Boolean.toString(isDirected)));
+        System.out.println(String.format("dynamic: %s",
+            Boolean.toString(isDynamic)));
     }
 
-    public void setColumnRole(int columnIndex, RoleType columnRole)
+    public void setColumnRole(int columnIndex, ColumnRoleType columnRole)
     {
-        ;
+        System.out.println(String.format("column %s: %s",
+            Integer.toString(columnIndex), columnRole.toString()));
     }
 
     @Override
