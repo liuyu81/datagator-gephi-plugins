@@ -8,9 +8,7 @@ package org.datagator.api.client;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.io.IOException;
 import java.io.Reader;
-import java.util.Enumeration;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 /**
  * immutable Matrix object implementation
@@ -18,7 +16,7 @@ import java.util.NoSuchElementException;
  * @author LIU Yu <liuyu@opencps.net>
  * @date 2015/09/07
  */
-@JsonDeserialize(using = MatrixDeserializer.class)
+@JsonDeserialize(using = SimpleMatrixDeserializer.class)
 public class SimpleMatrix
     extends Entity
     implements Matrix
@@ -32,12 +30,12 @@ public class SimpleMatrix
 
     private final int rowsCount;
     private final int columnsCount;
-    private final MatrixRowBuffer rows;
+    private final RowBuffer rows;
     private final int bodyRow;
     private final int bodyColumn;
 
     protected SimpleMatrix(int columnHeaders, int rowHeaders,
-        MatrixRowBuffer rows, int rowsCount, int columnsCount)
+        RowBuffer rows, int rowsCount, int columnsCount)
     {
         super("datagator#Matrix");
         this.bodyRow = columnHeaders;
@@ -62,7 +60,7 @@ public class SimpleMatrix
     @Override
     public Matrix columnHeaders()
     {
-        MatrixRowBuffer slice = new SimpleRowBuffer();
+        RowBuffer slice = new SimpleRowBuffer();
         Iterator<Object[]> it = rows();
         for (int r = 0; r < bodyRow; r++) {
             slice.put(it.next());

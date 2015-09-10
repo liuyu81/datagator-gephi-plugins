@@ -5,15 +5,13 @@
  */
 package org.datagator.api.client;
 
-import java.io.IOException;
-
 /**
  * Row buffer model of Matrix object
  *
  * @author LIU Yu <liuyu@opencps.net>
  * @date 2015/09/09
  */
-public interface MatrixRowBuffer extends Iterable<Object[]>
+public interface RowBuffer extends Iterable<Object[]>
 {
     public void put(Object[] row);
     public void clear();

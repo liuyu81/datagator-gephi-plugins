@@ -16,7 +16,7 @@ import java.util.NoSuchElementException;
  * @date 2015/09/09
  */
 public class SimpleRowBuffer
-    implements MatrixRowBuffer
+    implements RowBuffer
 {
 
     private final ArrayList<Object[]> model = new ArrayList<Object[]>();

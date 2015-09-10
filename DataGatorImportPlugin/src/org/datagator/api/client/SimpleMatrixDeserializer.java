@@ -5,32 +5,26 @@
  */
 package org.datagator.api.client;
 
-import com.fasterxml.jackson.core.JsonEncoding;
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.util.TokenBuffer;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedList;
 
 /**
- * JSON-decoder for immutable Matrix object.
+ * JSON-decoder for simple Matrix object.
  *
  * @author LIU Yu <liuyu@opencps.net>
  * @date 2015/09/07
  */
-class MatrixDeserializer
+class SimpleMatrixDeserializer
     extends JsonDeserializer<Matrix>
 {
 
     private static void parseRows(JsonParser jp,
-        int bodyRow, int bodyColumn, MatrixRowBuffer columnHeaders)
+        int bodyRow, int bodyColumn, RowBuffer columnHeaders)
         throws IOException, JsonProcessingException
     {
         int rowIndex = 0;
@@ -135,7 +129,8 @@ class MatrixDeserializer
             throw new RuntimeException("Invalid Matrix shape");
         }
 
-        return new SimpleMatrix(bodyRow, bodyColumn, columnHeaders, rowsCount, columnsCount);
+        return new SimpleMatrix(bodyRow, bodyColumn, columnHeaders, rowsCount,
+            columnsCount);
     }
 
 };

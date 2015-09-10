@@ -8,7 +8,6 @@ package org.datagator.ext.gephi.importer;
 import java.awt.Cursor;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import javax.swing.JPanel;
@@ -42,8 +41,10 @@ public class MatrixJsonImporterUI
             MatrixJsonImporter.ColumnRoleType.TARGET_NODE);
         roleDict.put(MatrixJsonImporterUIPanel.NODE,
             MatrixJsonImporter.ColumnRoleType.UNDIRECTED_NODE);
-        roleDict.put(MatrixJsonImporterUIPanel.EDGE,
-            MatrixJsonImporter.ColumnRoleType.EDGE_LABEL);
+        roleDict.put(MatrixJsonImporterUIPanel.EDGE_WEIGHT,
+            MatrixJsonImporter.ColumnRoleType.EDGE_WEIGHT);
+        // roleDict.put(MatrixJsonImporterUIPanel.EDGE_LABEL,
+        //     MatrixJsonImporter.ColumnRoleType.EDGE_LABEL);
         roleDict.put(MatrixJsonImporterUIPanel.TIME,
             MatrixJsonImporter.ColumnRoleType.TIME);
     }
@@ -54,10 +55,8 @@ public class MatrixJsonImporterUI
 
     private void previewMatrixAsync()
     {
-        assert ((importer != null) && (panel != null));
-
         // during `ImporterUI.setup()`, `importer.reader` is still `null`, the
-        // only viable means to access the file is through the MRF list.
+        // only viable means to preview the file is through the MRF list.
         MostRecentFiles mrf = Lookup.getDefault().lookup(MostRecentFiles.class);
         String filePath = mrf.getMRUFileList().get(0);
         try {
@@ -105,6 +104,8 @@ public class MatrixJsonImporterUI
     public void unsetup(boolean update)
     {
         if (update) {
+            panel.updateUI();
+            
             // edge type: directed / undirected
             importer.setGraphType(panel.isDirectedGraph(),
                 panel.isDynamicGraph());

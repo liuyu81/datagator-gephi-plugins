@@ -38,8 +38,10 @@ class MatrixJsonImporterUIPanel
         "MatrixJsonImporterUI.role.node_tgt");
     public static final String NODE = NbBundle.getMessage(
         MatrixJsonImporterUI.class, "MatrixJsonImporterUI.role.node");
-    public static final String EDGE = NbBundle.getMessage(
-        MatrixJsonImporterUI.class, "MatrixJsonImporterUI.role.edge");
+    // public static final String EDGE_LABEL = NbBundle.getMessage(
+    //     MatrixJsonImporterUI.class, "MatrixJsonImporterUI.role.edge_lbl");
+    public static final String EDGE_WEIGHT = NbBundle.getMessage(
+        MatrixJsonImporterUI.class, "MatrixJsonImporterUI.role.edge_wt");
     public static final String TIME = NbBundle.getMessage(
         MatrixJsonImporterUI.class, "MatrixJsonImporterUI.role.time");
 
@@ -58,10 +60,11 @@ class MatrixJsonImporterUIPanel
             } else {
                 model.addElement(NODE);
             }
-            model.addElement(EDGE);
             if (isDynamicGraph) {
                 model.addElement(TIME);
             }
+            model.addElement(EDGE_WEIGHT);
+            // model.addElement(EDGE_LABEL);
             model.addElement(null);
         }
     };
@@ -86,10 +89,11 @@ class MatrixJsonImporterUIPanel
             final int column)
         {
             assert (column == 1);
-
+            
             final RoleEditorWidget widget
                 = (RoleEditorWidget) super.getTableCellEditorComponent(
                     table, value, isSelected, row, column);
+            final RoleEditor editor = this;
 
             for (ActionListener item : widget.getActionListeners()) {
                 widget.removeActionListener(item);
@@ -109,6 +113,7 @@ class MatrixJsonImporterUIPanel
                             onRoleChange(table, row, newRole);
                         }
                     }
+                    editor.stopCellEditing();
                 }
             });
             return widget;

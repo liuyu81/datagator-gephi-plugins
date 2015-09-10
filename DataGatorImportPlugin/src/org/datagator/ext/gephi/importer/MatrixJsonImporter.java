@@ -5,13 +5,28 @@
  */
 package org.datagator.ext.gephi.importer;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
-import java.io.LineNumberReader;
 import java.io.Reader;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.TimeZone;
 import org.datagator.api.client.Matrix;
 import org.datagator.api.client.SimpleMatrix;
+import org.gephi.data.attributes.api.AttributeColumn;
+import org.gephi.data.attributes.api.AttributeTable;
+import org.gephi.data.attributes.api.AttributeType;
+import org.gephi.dynamic.api.DynamicModel.TimeFormat;
 import org.gephi.io.importer.api.ContainerLoader;
+import org.gephi.io.importer.api.EdgeDefault;
 import org.gephi.io.importer.api.EdgeDraft;
+import org.gephi.io.importer.api.Issue;
 import org.gephi.io.importer.api.NodeDraft;
 import org.gephi.io.importer.api.Report;
 import org.gephi.io.importer.spi.FileImporter;
@@ -27,6 +42,9 @@ public class MatrixJsonImporter
     implements FileImporter, LongTask
 {
 
+    private static final SimpleDateFormat dateFormat = new SimpleDateFormat(
+        "yyyy-MM-dd");
+
     private Reader reader;
     private ContainerLoader container;
     private Report report;
@@ -34,9 +52,17 @@ public class MatrixJsonImporter
     private boolean cancel = false;
 
     private Matrix matrixHeaders = null;
+    private int rowsCount = 0;
+
+    private boolean isDirected = true;
+    private boolean isDynamic = true;
+    private boolean edgeWeight = true;
+
+    private AttributeColumn acWeight = null;
 
     public static enum ColumnRoleType
     {
+
         SOURCE_NODE,
         TARGET_NODE,
         UNDIRECTED_NODE,
@@ -45,19 +71,21 @@ public class MatrixJsonImporter
         TIME,
     };
 
+    private final ArrayList<Object[]> roleIndex = new ArrayList<Object[]>();
+
     public Matrix getMatrixHeaders()
     {
         if (this.matrixHeaders == null) {
             try {
-                this.matrixHeaders
-                    = SimpleMatrix.create(this.reader).columnHeaders();
+                Matrix matrix = SimpleMatrix.create(this.reader);
+                rowsCount = matrix.getRowsCount();
+                this.matrixHeaders = matrix.columnHeaders();
             } catch (IOException ioe) {
                 throw new RuntimeException(ioe);
             } catch (RuntimeException re) {
-                throw re;
-                // throw new RuntimeException(NbBundle.getMessage(
-                //    MatrixJsonImporter.class,
-                //    "MatrixJsonImporter.msg.bad_matrix"));
+                throw new RuntimeException(NbBundle.getMessage(
+                    MatrixJsonImporter.class,
+                    "MatrixJsonImporter.msg.bad_matrix"));
             }
         }
         return this.matrixHeaders;
@@ -65,16 +93,16 @@ public class MatrixJsonImporter
 
     public void setGraphType(boolean isDirected, boolean isDynamic)
     {
-        System.out.println(String.format("directed: %s",
-            Boolean.toString(isDirected)));
-        System.out.println(String.format("dynamic: %s",
-            Boolean.toString(isDynamic)));
+        this.isDirected = isDirected;
+        this.isDynamic = isDynamic;
     }
 
     public void setColumnRole(int columnIndex, ColumnRoleType columnRole)
     {
-        System.out.println(String.format("column %s: %s",
-            Integer.toString(columnIndex), columnRole.toString()));
+        this.roleIndex.add(new Object[]{columnRole, columnIndex});
+        if (columnRole.equals(ColumnRoleType.EDGE_WEIGHT)) {
+            this.edgeWeight = true;
+        }
     }
 
     @Override
@@ -90,10 +118,30 @@ public class MatrixJsonImporter
         this.report = new Report();
 
         try {
-            // TODO
-            // importData(lineReader);
+            progressTicket.start();
+            if (isDirected) {
+                container.setEdgeDefault(EdgeDefault.DIRECTED);
+            } else {
+                container.setEdgeDefault(EdgeDefault.UNDIRECTED);
+            }
+            if (isDynamic) {
+                container.setTimeFormat(TimeFormat.DATE);
+                if (edgeWeight) {
+                    AttributeTable edgeTable
+                        = container.getAttributeModel().getEdgeTable();
+                    if (edgeTable.hasColumn("weight")) {
+                        edgeTable.removeColumn(edgeTable.getColumn("weight"));
+                    }
+                    acWeight = edgeTable.addColumn(
+                        "weight", AttributeType.DYNAMIC_FLOAT);
+                }
+            }
+            progressTicket.switchToDeterminate(rowsCount);
+            parseMatrix(this.reader);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        } finally {
+            progressTicket.finish();
         }
 
         return !cancel;
@@ -124,67 +172,322 @@ public class MatrixJsonImporter
         this.progressTicket = progressTicket;
     }
 
-    private void importData(LineNumberReader reader)
-        throws Exception
+    private static TypeReference<Object[]> tr = new TypeReference<Object[]>()
     {
-        // read type code initial line
-        String line = reader.readLine();
-        String typecode = line;
-        report.log("Typecode is " + typecode);
+    };
 
-        // read comment lines if any
-        boolean comment = true;
-        while (comment) {
-            line = reader.readLine();
-            comment = line.startsWith("%");
+    private void parseRows(JsonParser jp, int bodyRow, int bodyColumn)
+        throws IOException
+    {
+        JsonToken token = jp.getCurrentToken(); // START_ARRAY
+        if (!token.equals(JsonToken.START_ARRAY)) {
+            report.logIssue(new Issue(
+                String.format("Unexpected token %s", token),
+                Issue.Level.CRITICAL));
+            return;
         }
 
-        String[] str = line.split("( )+");
-        int nRows = (Integer.valueOf(str[0].trim())).intValue();
-        int nColumns = (Integer.valueOf(str[1].trim())).intValue();
-        int nNonZeros = (Integer.valueOf(str[2].trim())).intValue();
-        report.log("Number of rows: " + nRows);
-        report.log("Number of cols: " + nColumns);
-        report.log("Number of non zeros: " + nNonZeros);
+        int rowIndex = 0;
+        token = jp.nextToken(); // START_ARRAY
 
-        while ((line = reader.readLine()) != null) {
-            //Read coordinates and value
-            str = line.split("( )+");
-            int node1Index = (Integer.valueOf(str[0].trim())).intValue();
-            int node2Index = (Integer.valueOf(str[1].trim())).intValue();
-            float weight = 1f;
-            if (str.length > 2) {
-                weight = (Double.valueOf(str[2].trim())).floatValue();
+        // skip matrix headers
+        while (rowIndex < bodyRow) {
+            while (!token.equals(JsonToken.END_ARRAY)) {
+                token = jp.nextToken();
+            }
+            rowIndex += 1;
+            token = jp.nextToken(); // START_ARRAY
+        }
+
+        if (rowIndex > 0) {
+            report.logIssue(new Issue(String.format("Skipped %s header row(s).",
+                Integer.toString(rowIndex)), Issue.Level.INFO));
+        }
+
+        while (token.equals(JsonToken.START_ARRAY)) {
+
+            rowIndex += 1;
+            progressTicket.progress(rowIndex);
+
+            String[] nodePair = new String[]{null, null};
+            int nodeIndex = 0;
+            boolean reversed = false;
+
+            // String label = null;
+            String time = null;
+            Object weight = null;
+
+            Object[] vector = jp.readValueAs(tr);
+            for (Object[] ri : roleIndex) {
+                ColumnRoleType role = (ColumnRoleType) ri[0];
+                int index = (Integer) ri[1];
+                switch (role) {
+                    case SOURCE_NODE:
+                        if (nodeIndex > 0) {
+                            reversed = true;
+                        }
+                    case TARGET_NODE:
+                        if (nodeIndex < 1) {
+                            reversed = true;
+                        }
+                    case UNDIRECTED_NODE:
+                        if (nodeIndex > 1) {
+                            report.logIssue(new Issue(
+                                String.format(
+                                    "Duplicated node role on line %s",
+                                    Integer.toString(rowIndex)),
+                                Issue.Level.WARNING));
+                            break;
+                        }
+                        String nodeLabel = String.valueOf(vector[index]).trim();
+                        nodePair[nodeIndex++] = nodeLabel;
+                        break;
+                    // case EDGE_LABEL:
+                    //    label = String.valueOf(vector[index]);
+                    //    break;
+                    case EDGE_WEIGHT:
+                        weight = vector[index];
+                        break;
+                    case TIME:
+                        time = String.valueOf(vector[index]);
+                        break;
+                }
             }
 
-            //Get or create node
-            NodeDraft node1 = null;
-            if (container.nodeExists(String.valueOf(node1Index))) {
-                node1 = container.getNode(String.valueOf(node1Index));
+            if (nodeIndex != 2) {
+                report.logIssue(new Issue(
+                    "Invalid role assignment, need two NODE columns",
+                    Issue.Level.CRITICAL));
+                return;
+            }
+
+            String sourceLabel = nodePair[reversed ? 1 : 0];
+            String targetLabel = nodePair[reversed ? 0 : 1];
+            String sourceId = sourceLabel;
+            String targetId = targetLabel;
+
+            String edgeId = sourceLabel;
+            if (!isDirected && (sourceLabel.compareTo(targetLabel) > 0)) {
+                edgeId = targetLabel + "/" + sourceId;
             } else {
-                node1 = container.factory().newNodeDraft();
-                node1.setId(String.valueOf(node1Index));
-
-                //Don't forget to add the node
-                container.addNode(node1);
+                edgeId += "/" + targetLabel;
             }
-            NodeDraft node2 = null;
-            if (container.nodeExists(String.valueOf(node2Index))) {
-                node2 = container.getNode(String.valueOf(node2Index));
+
+            Date start = null;
+            Date end = null;
+            if (time != null) {
+                Date[] interval = parseTimeInterval(time);
+                start = interval[0];
+                end = interval[1];
+                if ((start == null) || (end == null)) {
+                    report.logIssue(new Issue(
+                        String.format("Invalid time on line %s",
+                            Integer.toString(rowIndex)),
+                        Issue.Level.WARNING));
+                    token = jp.nextToken(); // START_ARRAY
+                    continue;
+                }
+            }
+
+            float edgeWeight = 0.0f;
+
+            if (weight instanceof Double) {
+                edgeWeight = ((Double) weight).floatValue();
+            } else if (weight instanceof Integer) {
+                edgeWeight = ((Integer) weight).floatValue();
+            } else if (weight != null) {
+                report.logIssue(new Issue(
+                    String.format("Edge weight is non-numerical on line %s",
+                        Integer.toString(rowIndex)),
+                    Issue.Level.WARNING));
+                token = jp.nextToken(); // START_ARRAY
+                continue;
+            }
+
+            final NodeDraft source;
+            final NodeDraft target;
+            final EdgeDraft edge;
+
+            if (container.nodeExists(sourceId)) {
+                source = container.getNode(sourceId);
             } else {
-                node2 = container.factory().newNodeDraft();
-                node2.setId(String.valueOf(node2Index));
-
-                //Don't forget to add the node
-                container.addNode(node2);
+                source = container.factory().newNodeDraft();
+                source.setId(sourceId);
+                source.setLabel(sourceLabel);
+                container.addNode(source);
             }
 
-            //Create edge
-            EdgeDraft edgeDraft = container.factory().newEdgeDraft();
-            edgeDraft.setSource(node1);
-            edgeDraft.setTarget(node2);
-            edgeDraft.setWeight(weight);
-            container.addEdge(edgeDraft);
+            if (container.nodeExists(targetId)) {
+                target = container.getNode(targetId);
+            } else {
+                target = container.factory().newNodeDraft();
+                target.setId(targetId);
+                target.setLabel(targetLabel);
+                container.addNode(target);
+            }
+
+            if (container.edgeExists(edgeId)) {
+                edge = container.getEdge(edgeId);
+            } else {
+                edge = container.factory().newEdgeDraft();
+                edge.setSource(source);
+                edge.setTarget(target);
+                edge.setId(edgeId);
+                container.addEdge(edge);
+            }
+            if (time != null) {
+                edge.addTimeInterval(dateFormat.format(start),
+                    dateFormat.format(end));
+            }
+            if (weight != null) {
+                if (time != null) {
+                    edge.addAttributeValue(acWeight, Float.valueOf(edgeWeight),
+                        dateFormat.format(start), dateFormat.format(end));
+                } else {
+                    edge.addAttributeValue(acWeight, edgeWeight);
+                }
+            }
+
+            token = jp.nextToken(); // START_ARRAY
+        }
+    }
+
+    private Date[] parseTimeInterval(String interval)
+    {
+        Date start = null;
+        Date end = null;
+        if (interval.contains(",")) {
+            String[] tuple = interval.split(",");
+            start = parseDate(tuple[0], true);
+            end = parseDate(tuple[1], true);
+        } else {
+            start = parseDate(interval, true);
+            end = parseDate(interval, false);
+        }
+        return new Date[]{start, end};
+    }
+
+    private Date parseDate(String date, boolean defaultFirst)
+    {
+        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UCT"));
+        if (date.matches("^\\s*\\d{4}(?:-//d{1,2}(?:-//d{1,2})?)?\\s*$")) {
+            String[] tuple = date.trim().split("-");
+            int yyyy = Integer.parseInt(tuple[0]);
+            int mm = (tuple.length > 1) ? Integer.parseInt(tuple[1])
+                : ((defaultFirst) ? 0 : 11);
+            int dd = (tuple.length > 2) ? Integer.parseInt(tuple[2])
+                : ((defaultFirst) ? 1 : 31);
+            cal.set(yyyy, mm, dd);
+            return cal.getTime();
+        }
+        return null;
+    }
+
+    private void parseMatrix(Reader reader)
+        throws Exception
+    {
+        JsonFactory json = new JsonFactory();
+        ObjectMapper mapper = new ObjectMapper();
+        json.setCodec(mapper);
+        JsonParser jp = json.createParser(reader);
+
+        String kind = null;
+        int rowsCount = -1;
+        int columnsCount = -1;
+        int bodyRow = -1;
+        int bodyColumn = -1;
+
+        JsonToken token = jp.nextToken(); // START_OBJECT
+        if (!token.equals(JsonToken.START_OBJECT)) {
+            report.logIssue(new Issue(
+                String.format("Unexpected token %s", token),
+                Issue.Level.CRITICAL));
+            return;
+        }
+
+        token = jp.nextToken(); // FIELD_NAME
+        if (!token.equals(JsonToken.FIELD_NAME)) {
+            report.logIssue(new Issue(
+                String.format("Unexpected token %s", token),
+                Issue.Level.CRITICAL));
+            return;
+        }
+        while (token.equals(JsonToken.FIELD_NAME)) {
+            String name = jp.getText();
+            token = jp.nextToken();
+            if (name.equals("kind")) {
+                if (!token.equals(JsonToken.VALUE_STRING)) {
+                    report.logIssue(new Issue(
+                        String.format("Unexpected token %s", token),
+                        Issue.Level.CRITICAL));
+                    return;
+                }
+                kind = jp.getText();
+                if (!kind.equals("datagator#Matrix")) {
+                    report.logIssue(new Issue(
+                        String.format("Unexpected Entity kind %s", kind),
+                        Issue.Level.CRITICAL));
+                    return;
+                }
+            } else if (name.equals("columnHeaders")) {
+                if (!token.equals(JsonToken.VALUE_NUMBER_INT)) {
+                    report.logIssue(new Issue(
+                        String.format("Unexpected token %s", token),
+                        Issue.Level.CRITICAL));
+                    return;
+                }
+                bodyRow = jp.getIntValue();
+            } else if (name.equals("rowHeaders")) {
+                if (!token.equals(JsonToken.VALUE_NUMBER_INT)) {
+                    report.logIssue(new Issue(
+                        String.format("Unexpected token %s", token),
+                        Issue.Level.CRITICAL));
+                    return;
+                }
+                bodyColumn = jp.getIntValue();
+            } else if (name.equals("rows")) {
+                if (bodyRow < 0 || bodyColumn < 0) {
+                    report.logIssue(new Issue(
+                        "Unexpected property order 'columnHeaders' and 'rowHeaders' should precede 'rows'.",
+                        Issue.Level.CRITICAL));
+                    return;
+                }
+                parseRows(jp, bodyRow, bodyColumn);
+            } else if (name.equals("rowsCount")) {
+                if (!token.equals(JsonToken.VALUE_NUMBER_INT)) {
+                    report.logIssue(new Issue(
+                        String.format("Unexpected token %s", token),
+                        Issue.Level.CRITICAL));
+                    return;
+                }
+                rowsCount = jp.getIntValue();
+            } else if (name.equals("columnsCount")) {
+                if (!token.equals(JsonToken.VALUE_NUMBER_INT)) {
+                    report.logIssue(new Issue(
+                        String.format("Unexpected token %s", token),
+                        Issue.Level.CRITICAL));
+                    return;
+                }
+                columnsCount = jp.getIntValue();
+            } else {
+                report.logIssue(new Issue(
+                    String.format("Unexpected property %s", name),
+                    Issue.Level.CRITICAL));
+                return;
+            }
+            token = jp.nextToken(); // FIELD_NAME
+        }
+
+        if (!(0 <= bodyRow && bodyRow <= rowsCount)) {
+            report.logIssue(new Issue(
+                "Invalid Matrix shape",
+                Issue.Level.CRITICAL));
+        }
+
+        if (!(0 <= bodyColumn && bodyColumn <= columnsCount)) {
+            report.logIssue(new Issue(
+                "Invalid Matrix shape",
+                Issue.Level.CRITICAL));
         }
     }
 }
