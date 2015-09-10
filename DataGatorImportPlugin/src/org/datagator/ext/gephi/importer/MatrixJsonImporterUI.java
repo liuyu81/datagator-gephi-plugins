@@ -103,9 +103,7 @@ public class MatrixJsonImporterUI
     @Override
     public void unsetup(boolean update)
     {
-        if (update) {
-            panel.updateUI();
-            
+        if (update) {            
             // edge type: directed / undirected
             importer.setGraphType(panel.isDirectedGraph(),
                 panel.isDynamicGraph());
@@ -128,7 +126,6 @@ public class MatrixJsonImporterUI
                 importer.setColumnRole(r, roleType);
             }
         }
-        executor.cancel();
         executor = null;
         importer = null;
         panel = null;

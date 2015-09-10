@@ -16,6 +16,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.TimeZone;
 import org.datagator.api.client.Matrix;
 import org.datagator.api.client.SimpleMatrix;
@@ -56,7 +58,7 @@ public class MatrixJsonImporter
 
     private boolean isDirected = true;
     private boolean isDynamic = true;
-    private boolean edgeWeight = true;
+    private boolean isEdgeWeighted = true;
 
     private AttributeColumn acWeight = null;
 
@@ -101,7 +103,7 @@ public class MatrixJsonImporter
     {
         this.roleIndex.add(new Object[]{columnRole, columnIndex});
         if (columnRole.equals(ColumnRoleType.EDGE_WEIGHT)) {
-            this.edgeWeight = true;
+            this.isEdgeWeighted = true;
         }
     }
 
@@ -124,16 +126,36 @@ public class MatrixJsonImporter
             } else {
                 container.setEdgeDefault(EdgeDefault.UNDIRECTED);
             }
+            container.setTimeFormat(TimeFormat.DATE);
+            AttributeTable edgeTable
+                = container.getAttributeModel().getEdgeTable();
             if (isDynamic) {
-                container.setTimeFormat(TimeFormat.DATE);
-                if (edgeWeight) {
-                    AttributeTable edgeTable
-                        = container.getAttributeModel().getEdgeTable();
+                if (isEdgeWeighted) {
                     if (edgeTable.hasColumn("weight")) {
-                        edgeTable.removeColumn(edgeTable.getColumn("weight"));
+                        acWeight = edgeTable.getColumn("weight");
+                        if (acWeight.getType() != AttributeType.DYNAMIC_FLOAT) {
+                            edgeTable.removeColumn(acWeight);
+                            acWeight = null;
+                        }
                     }
-                    acWeight = edgeTable.addColumn(
-                        "weight", AttributeType.DYNAMIC_FLOAT);
+                    if (acWeight == null) {
+                        acWeight = edgeTable.addColumn(
+                            "weight", AttributeType.DYNAMIC_FLOAT);
+                    }
+                }
+            } else {
+                if (isEdgeWeighted) {
+                    if (edgeTable.hasColumn("weight")) {
+                        acWeight = edgeTable.getColumn("weight");
+                        if (acWeight.getType() != AttributeType.FLOAT) {
+                            edgeTable.removeColumn(acWeight);
+                            acWeight = null;
+                        }
+                    }
+                    if (acWeight == null) {
+                        acWeight = edgeTable.addColumn(
+                            "weight", AttributeType.FLOAT);
+                    }
                 }
             }
             progressTicket.switchToDeterminate(rowsCount);
@@ -179,6 +201,8 @@ public class MatrixJsonImporter
     private void parseRows(JsonParser jp, int bodyRow, int bodyColumn)
         throws IOException
     {
+        Set<String> edgeWeghtSet = new HashSet<String>();
+
         JsonToken token = jp.getCurrentToken(); // START_ARRAY
         if (!token.equals(JsonToken.START_ARRAY)) {
             report.logIssue(new Issue(
@@ -236,8 +260,8 @@ public class MatrixJsonImporter
                                 String.format(
                                     "Duplicated node role on line %s",
                                     Integer.toString(rowIndex)),
-                                Issue.Level.WARNING));
-                            break;
+                                Issue.Level.CRITICAL));
+                            continue;
                         }
                         String nodeLabel = String.valueOf(vector[index]).trim();
                         nodePair[nodeIndex++] = nodeLabel;
@@ -266,11 +290,11 @@ public class MatrixJsonImporter
             String sourceId = sourceLabel;
             String targetId = targetLabel;
 
-            String edgeId = sourceLabel;
+            String edgeId = null;
             if (!isDirected && (sourceLabel.compareTo(targetLabel) > 0)) {
-                edgeId = targetLabel + "/" + sourceId;
+                edgeId = targetLabel + "/" + sourceLabel;
             } else {
-                edgeId += "/" + targetLabel;
+                edgeId = sourceLabel + "/" + targetLabel;
             }
 
             Date start = null;
@@ -283,7 +307,7 @@ public class MatrixJsonImporter
                     report.logIssue(new Issue(
                         String.format("Invalid time on line %s",
                             Integer.toString(rowIndex)),
-                        Issue.Level.WARNING));
+                        Issue.Level.SEVERE));
                     token = jp.nextToken(); // START_ARRAY
                     continue;
                 }
@@ -299,7 +323,7 @@ public class MatrixJsonImporter
                 report.logIssue(new Issue(
                     String.format("Edge weight is non-numerical on line %s",
                         Integer.toString(rowIndex)),
-                    Issue.Level.WARNING));
+                    Issue.Level.CRITICAL));
                 token = jp.nextToken(); // START_ARRAY
                 continue;
             }
@@ -340,11 +364,19 @@ public class MatrixJsonImporter
                     dateFormat.format(end));
             }
             if (weight != null) {
+                String edgeKey = edgeId;
                 if (time != null) {
-                    edge.addAttributeValue(acWeight, Float.valueOf(edgeWeight),
-                        dateFormat.format(start), dateFormat.format(end));
+                    edgeKey += "/" + time;
+                    if (!edgeWeghtSet.contains(edgeKey)) {
+                        edgeWeghtSet.add(edgeKey);
+                        edge.addAttributeValue(acWeight, edgeWeight,
+                            dateFormat.format(start), dateFormat.format(end));
+                    }
                 } else {
-                    edge.addAttributeValue(acWeight, edgeWeight);
+                    if (!edgeWeghtSet.contains(edgeKey)) {
+                        edgeWeghtSet.add(edgeKey);
+                        edge.setWeight(edgeWeight);
+                    }
                 }
             }
 

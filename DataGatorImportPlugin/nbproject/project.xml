@@ -104,7 +104,10 @@
                     </run-dependency>
                 </dependency>
             </module-dependencies>
-            <public-packages/>
+            <public-packages>
+                <package>org.datagator.api.client</package>
+                <package>org.datagator.ext.gephi.importer</package>
+            </public-packages>
         </data>
     </configuration>
 </project>
