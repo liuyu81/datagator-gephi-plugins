@@ -57,9 +57,10 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Main UI logic implementation.
+ *
  * This is the representation layer of the importer responsible for mapping UI
  * input / output to business logic settings / outcomes.
- * 
+ *
  * @author LIU Yu <liuyu@opencps.net>
  */
 @ServiceProvider(service = ImporterUI.class)
@@ -67,7 +68,7 @@ public class MatrixJsonImporterUI
     implements ImporterUI
 {
 
-    private static Map<String, MatrixJsonImporter.ColumnRoleType> roleDict;
+    private static final Map<String, MatrixJsonImporter.ColumnRoleType> roleDict;
 
     static {
         roleDict = new HashMap<String, MatrixJsonImporter.ColumnRoleType>();
@@ -76,11 +77,11 @@ public class MatrixJsonImporterUI
         roleDict.put(MatrixJsonImporterUIPanel.TARGET_NODE,
             MatrixJsonImporter.ColumnRoleType.TARGET_NODE);
         roleDict.put(MatrixJsonImporterUIPanel.NODE,
-            MatrixJsonImporter.ColumnRoleType.UNDIRECTED_NODE);
+            MatrixJsonImporter.ColumnRoleType.NODE);
         roleDict.put(MatrixJsonImporterUIPanel.EDGE_WEIGHT,
             MatrixJsonImporter.ColumnRoleType.EDGE_WEIGHT);
-        // roleDict.put(MatrixJsonImporterUIPanel.EDGE_LABEL,
-        //     MatrixJsonImporter.ColumnRoleType.EDGE_LABEL);
+        roleDict.put(MatrixJsonImporterUIPanel.EDGE_LABEL,
+            MatrixJsonImporter.ColumnRoleType.EDGE_LABEL);
         roleDict.put(MatrixJsonImporterUIPanel.TIME,
             MatrixJsonImporter.ColumnRoleType.TIME);
     }
@@ -139,19 +140,20 @@ public class MatrixJsonImporterUI
     @Override
     public void unsetup(boolean update)
     {
-        if (update) {            
-            // edge type: directed / undirected
+        if (update) {
+            // graph type: directed / undirected, dynamic / static
             importer.setGraphType(panel.isDirectedGraph(),
                 panel.isDynamicGraph());
-            //
+            // column roles to indices mapping
             TableModel model = panel.getTableModel();
-            for (int r = 0, c = 1; r < model.getRowCount(); r++) {
-                Object roleName = model.getValueAt(r, c);
+            for (int r = 0, c = MatrixJsonImporterUIPanel.ROLE_COL_INDEX;
+                r < model.getRowCount(); r++) {
+                String roleName = (String) model.getValueAt(r, c);
                 if (roleName == null) {
                     continue;
                 }
                 MatrixJsonImporter.ColumnRoleType roleType
-                    = this.roleDict.get(roleName);
+                    = roleDict.get(roleName);
                 if (roleType == null) {
                     importer.getReport().logIssue(new Issue(String.format(
                         NbBundle.getMessage(
