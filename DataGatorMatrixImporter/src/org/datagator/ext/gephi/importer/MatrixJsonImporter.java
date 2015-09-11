@@ -94,7 +94,7 @@ public class MatrixJsonImporter
         matrixRowType = new TypeReference<Object[]>()
         {
         };
-        calendar = Calendar.getInstance(TimeZone.getTimeZone("UCT"));
+        calendar = Calendar.getInstance();
     }
 
     private Reader reader;

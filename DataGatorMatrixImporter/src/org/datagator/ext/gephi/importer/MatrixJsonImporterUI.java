@@ -102,6 +102,9 @@ public class MatrixJsonImporterUI
             throw new RuntimeException(ex);
         }
 
+        final MatrixJsonImporterUIPanel thePanel = this.panel;
+        final MatrixJsonImporter theImporter = this.importer;
+
         // pre-fetch matrix columns for role annotation, for large files (i.e.
         // > 1 mil records), this may take more than 10 seconds, so we need
         // to run in an asynchronous task to avoid jamming the UI.
@@ -110,12 +113,12 @@ public class MatrixJsonImporterUI
             @Override
             public void run()
             {
-                Cursor oldCursor = panel.getCursor();
-                panel.setCursor(new Cursor(Cursor.WAIT_CURSOR));
-                Matrix preview = importer.getMatrixHeaders();
-                panel.updateTableModel(preview.getRowsCount(),
+                Cursor oldCursor = thePanel.getCursor();
+                thePanel.setCursor(new Cursor(Cursor.WAIT_CURSOR));
+                Matrix preview = theImporter.getMatrixHeaders();
+                thePanel.updateTableModel(preview.getRowsCount(),
                     preview.getColumnsCount(), preview.rows());
-                panel.setCursor(oldCursor);
+                thePanel.setCursor(oldCursor);
             }
         };
         executor.execute(null, asyncTask);
