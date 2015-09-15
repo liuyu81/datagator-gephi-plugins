@@ -52,7 +52,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.TimeZone;
 import org.datagator.api.client.Entity;
 import org.datagator.api.client.Matrix;
 import org.gephi.data.attributes.api.AttributeColumn;
@@ -95,6 +94,36 @@ public class MatrixJsonImporter
         {
         };
         calendar = Calendar.getInstance();
+    }
+
+    private static Date[] parseTimeInterval(String interval)
+    {
+        final Date start;
+        final Date end;
+        if (interval.contains(",")) {
+            String[] tuple = interval.split(",");
+            start = parseDate(tuple[0], true);
+            end = parseDate(tuple[1], true);
+        } else {
+            start = parseDate(interval, true);
+            end = parseDate(interval, false);
+        }
+        return new Date[]{start, end};
+    }
+
+    private static Date parseDate(String date, boolean defaultFirst)
+    {
+        if (date.matches("^\\s*\\d{4}(?:-//d{1,2}(?:-//d{1,2})?)?\\s*$")) {
+            String[] tuple = date.trim().split("-");
+            int yyyy = Integer.parseInt(tuple[0]);
+            int mm = (tuple.length > 1) ? Integer.parseInt(tuple[1])
+                : ((defaultFirst) ? 0 : 11);
+            int dd = (tuple.length > 2) ? Integer.parseInt(tuple[2])
+                : ((defaultFirst) ? 1 : 31);
+            calendar.set(yyyy, mm, dd);
+            return calendar.getTime();
+        }
+        return null;
     }
 
     private Reader reader;
@@ -161,46 +190,29 @@ public class MatrixJsonImporter
         try {
             progressTicket.start();
 
-            // set graph edge default
-            if (isDirected) {
-                container.setEdgeDefault(EdgeDefault.DIRECTED);
-            } else {
-                container.setEdgeDefault(EdgeDefault.UNDIRECTED);
-            }
-
-            // set tiem format default
+            // set time format default
             container.setTimeFormat(TimeFormat.DATE);
 
-            // replace existing "Weight" attribute if type mismatch
+            // set graph edge default
+            EdgeDefault edgeType
+                = (isDirected) ? EdgeDefault.DIRECTED : EdgeDefault.UNDIRECTED;
+            container.setEdgeDefault(edgeType);
+
+            // replace "Weight" attribute column if type mismatch
             AttributeTable edgeTable
                 = container.getAttributeModel().getEdgeTable();
-            if (isDynamic) {
-                if (isEdgeWeighted) {
-                    if (edgeTable.hasColumn("weight")) {
-                        acWeight = edgeTable.getColumn("weight");
-                        if (acWeight.getType() != AttributeType.DYNAMIC_FLOAT) {
-                            edgeTable.removeColumn(acWeight);
-                            acWeight = null;
-                        }
-                    }
-                    if (acWeight == null) {
-                        acWeight = edgeTable.addColumn(
-                            "weight", AttributeType.DYNAMIC_FLOAT);
+            AttributeType acType = (isDynamic)
+                ? AttributeType.DYNAMIC_FLOAT : AttributeType.FLOAT;
+            if (isEdgeWeighted) {
+                if (edgeTable.hasColumn("weight")) {
+                    acWeight = edgeTable.getColumn("weight");
+                    if (acWeight.getType() != acType) {
+                        edgeTable.removeColumn(acWeight);
+                        acWeight = null;
                     }
                 }
-            } else {
-                if (isEdgeWeighted) {
-                    if (edgeTable.hasColumn("weight")) {
-                        acWeight = edgeTable.getColumn("weight");
-                        if (acWeight.getType() != AttributeType.FLOAT) {
-                            edgeTable.removeColumn(acWeight);
-                            acWeight = null;
-                        }
-                    }
-                    if (acWeight == null) {
-                        acWeight = edgeTable.addColumn(
-                            "weight", AttributeType.FLOAT);
-                    }
+                if (acWeight == null) {
+                    acWeight = edgeTable.addColumn("weight", acType);
                 }
             }
 
@@ -431,42 +443,12 @@ public class MatrixJsonImporter
         }
     }
 
-    private Date[] parseTimeInterval(String interval)
-    {
-        final Date start;
-        final Date end;
-        if (interval.contains(",")) {
-            String[] tuple = interval.split(",");
-            start = parseDate(tuple[0], true);
-            end = parseDate(tuple[1], true);
-        } else {
-            start = parseDate(interval, true);
-            end = parseDate(interval, false);
-        }
-        return new Date[]{start, end};
-    }
-
-    private Date parseDate(String date, boolean defaultFirst)
-    {
-        if (date.matches("^\\s*\\d{4}(?:-//d{1,2}(?:-//d{1,2})?)?\\s*$")) {
-            String[] tuple = date.trim().split("-");
-            int yyyy = Integer.parseInt(tuple[0]);
-            int mm = (tuple.length > 1) ? Integer.parseInt(tuple[1])
-                : ((defaultFirst) ? 0 : 11);
-            int dd = (tuple.length > 2) ? Integer.parseInt(tuple[2])
-                : ((defaultFirst) ? 1 : 31);
-            calendar.set(yyyy, mm, dd);
-            return calendar.getTime();
-        }
-        return null;
-    }
-
     private void parseMatrix(Reader reader)
         throws IOException
     {
         JsonParser jp = json.createParser(reader);
 
-        String kind = null;
+        String kind;
         int bodyRow = -1;
         int bodyColumn = -1;
 
