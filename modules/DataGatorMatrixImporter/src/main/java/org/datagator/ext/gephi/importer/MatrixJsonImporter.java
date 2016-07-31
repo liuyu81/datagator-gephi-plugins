@@ -54,8 +54,6 @@ import java.util.HashSet;
 import java.util.Set;
 import org.datagator.api.client.Entity;
 import org.datagator.api.client.Matrix;
-import org.gephi.graph.api.Column;
-import org.gephi.graph.api.Table;
 import org.gephi.graph.api.TimeFormat;
 import org.gephi.io.importer.api.ColumnDraft;
 import org.gephi.io.importer.api.ContainerLoader;
@@ -414,7 +412,6 @@ public class MatrixJsonImporter
                     edgeKey += "/" + timeField;
                     if (!edgeWeghtSet.contains(edgeKey)) {
                         edgeWeghtSet.add(edgeKey);
-                        edge.setValue(edgeKey, weightField, targetId, edgeId);
                         edge.setValue(acWeight.getId(), edgeWeight,
                                 dateFormat.format(start), dateFormat.format(end));
                     }
