@@ -9,3 +9,5 @@ keystore.ks
 dist/**
 build/**
 nbproject/private/**
+/nbproject/
+/target/
