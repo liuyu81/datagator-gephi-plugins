@@ -130,8 +130,9 @@ public class MatrixJsonImporter
     private ProgressTicket progressTicket;
     private boolean cancel = false;
     private ColumnDraft acWeight = null;
+    private Class<? extends Number> acWeightType = Double.class;
 
-    private final ArrayList<Object[]> roleIndex = new ArrayList<Object[]>();
+    private final ArrayList<Object[]> roleIndex = new ArrayList<>();
     private boolean isDirected = true;
     private boolean isDynamic = true;
     private boolean isEdgeWeighted = true;
@@ -198,8 +199,11 @@ public class MatrixJsonImporter
 
             // create "Weight" attribute column
             if (isEdgeWeighted) {
-                container.addEdgeColumn("weight", Float.class);
                 acWeight = container.getEdgeColumn("weight");
+                if (acWeight == null) {
+                    acWeight = container.addEdgeColumn("weight", acWeightType, isDynamic);
+                }
+                acWeightType = acWeight.getTypeClass();
             }
 
             progressTicket.switchToDeterminate(matrixRowsCount);
@@ -241,7 +245,7 @@ public class MatrixJsonImporter
     private void parseRows(JsonParser jp, int bodyRow, int bodyColumn)
         throws IOException
     {
-        Set<String> edgeWeghtSet = new HashSet<String>();
+        Set<String> edgeWeghtSet = new HashSet<>();
 
         JsonToken token = jp.getCurrentToken(); // START_ARRAY
         if (!token.equals(JsonToken.START_ARRAY)) {
@@ -356,12 +360,14 @@ public class MatrixJsonImporter
                 start = end = null;
             }
 
-            float edgeWeight = 0.0f;
+            double edgeWeight = 0.0;
 
             if (weightField instanceof Double) {
-                edgeWeight = ((Double) weightField).floatValue();
+                edgeWeight = (Double) weightField;
+            } else if (weightField instanceof Float) {
+                edgeWeight = ((Float) weightField).doubleValue();
             } else if (weightField instanceof Integer) {
-                edgeWeight = ((Integer) weightField).floatValue();
+                edgeWeight = ((Integer) weightField).doubleValue();
             } else if (weightField != null) {
                 report.logIssue(new Issue(
                     String.format("Edge weight is non-numerical on line %s",
@@ -412,13 +418,13 @@ public class MatrixJsonImporter
                     edgeKey += "/" + timeField;
                     if (!edgeWeghtSet.contains(edgeKey)) {
                         edgeWeghtSet.add(edgeKey);
-                        edge.setValue(acWeight.getId(), edgeWeight,
+                        edge.setValue(acWeight.getId(), acWeightType.cast(edgeWeight),
                                 dateFormat.format(start), dateFormat.format(end));
                     }
                 } else {
                     if (!edgeWeghtSet.contains(edgeKey)) {
                         edgeWeghtSet.add(edgeKey);
-                        edge.setWeight(edgeWeight);
+                        edge.setValue(acWeight.getId(), acWeightType.cast(edgeWeight));
                     }
                 }
             }

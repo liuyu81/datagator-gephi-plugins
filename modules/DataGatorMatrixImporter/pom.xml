@@ -9,7 +9,7 @@
 
     <groupId>org.datagator.ext</groupId>
     <artifactId>gephi-importer</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
     <packaging>nbm</packaging>
 
     <name>DataGator Matrix Importer</name>
@@ -86,9 +86,10 @@
                 <artifactId>nbm-maven-plugin</artifactId>
                 <configuration>
                     <licenseName>Apache 2.0</licenseName>
+                    <licenseFile>apache-2.0.txt</licenseFile>
                     <author>LIU Yu</author>
                     <authorEmail>liuyu@opencps.net</authorEmail>
-                    <authorUrl></authorUrl>
+                    <authorUrl>https://github.com/liuyu81/</authorUrl>
                     <sourceCodeUrl>https://github.com/DataGator/gephi-plugins</sourceCodeUrl>
                     <publicPackages>
                         <!-- Insert public packages -->

@@ -8,7 +8,7 @@
     <packaging>pom</packaging>
 
     <name>DataGator Gephi Plugins</name>
-    
+
     <!-- List of modules -->
     <modules>
         <!-- Add here the paths of all modules (e.g. <module>modules/MyModule</module>) -->
