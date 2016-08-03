@@ -1,3 +1,13 @@
+**/build
+**/nbproject/private
+**/nbproject/platform.properties
+nbproject/project.properties
+**/dist
 .DS_Store
-**/target/**
+toolkit
+keystore.ks
+dist/**
+build/**
+nbproject/private/**
+/nbproject/
 /target/
